@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Dashboard</h1>
+</div>
+
+<!-- Cards de Resumo -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card text-white bg-warning mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Pendentes (Total)</h5>
+                <p class="card-text display-4">{{ total_pendentes }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Entregues (Total)</h5>
+                <p class="card-text display-4">{{ total_retiradas }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- BARRA DE FILTROS E BUSCA -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body bg-light">
+        <form method="get" class="row g-3 align-items-end">
+            
+            <div class="col-md-4">
+                <label class="form-label fw-bold small">Buscar</label>
+                <input type="text" name="q" class="form-control" placeholder="Nome, Código ou Apto..." value="{{ filtro_q }}">
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label fw-bold small">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="PENDENTE" {% if filtro_status == 'PENDENTE' %}selected{% endif %}>Pendente</option>
+                    <option value="RETIRADA" {% if filtro_status == 'RETIRADA' %}selected{% endif %}>Retirada</option>
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label fw-bold small">Bloco</label>
+                <select name="bloco" id="filtro-bloco" class="form-select">
+                    <option value="">Todos</option>
+                    {% for b in blocos %}
+                        <option value="{{ b.id }}" {% if filtro_bloco|add:"0" == b.id %}selected{% endif %}>
+                            {{ b.nome }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label fw-bold small">Torre</label>
+                <select name="torre" id="filtro-torre" class="form-select" {% if not torres_filtradas %}disabled{% endif %}>
+                    <option value="">Todas</option>
+                    {% for t in torres_filtradas %}
+                        <option value="{{ t.id }}" {% if filtro_torre|add:"0" == t.id %}selected{% endif %}>
+                            {{ t.nome }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-2">
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">
+                         Filtrar
+                    </button>
+                    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm">Limpar</a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tabela de Encomendas -->
+<div class="card shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">Encomendas Recentes</h5>
+        <!-- LEGENDA DE PRAZOS -->
+        <div class="small">
+            <span class="badge bg-warning text-dark me-1">!</span> > 3 dias
+            <span class="badge bg-danger ms-2">!</span> > 7 dias
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Código</th>
+                    <th>Morador</th>
+                    <th>Local (Apt/Bloco)</th>
+                    <th>Data Chegada</th>
+                    <th>Data Retirada</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for encomenda in encomendas %}
+                <!-- LÓGICA DE COR NA LINHA (TR) -->
+                <tr class="{% if encomenda.status_prazo == 'CRITICO' %}table-danger{% elif encomenda.status_prazo == 'ATENCAO' %}table-warning{% endif %}">
+                    
+                    <td><strong>#{{ encomenda.codigo_encomenda }}</strong></td>
+                    <td>{{ encomenda.morador.nome }}</td>
+                    <td>{{ encomenda.morador.apto }}</td>
+                    <td>{{ encomenda.data_entrada|date:"d/m/Y H:i" }}</td>
+                    <td>
+                        <span class="text-muted">
+                            {{ encomenda.data_retirada|date:"d/m/Y H:i"|default:"-" }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if encomenda.status == 'PENDENTE' %}
+                            {% if encomenda.status_prazo == 'CRITICO' %}
+                                <span class="badge bg-danger">Atrasado</span>
+                            {% elif encomenda.status_prazo == 'ATENCAO' %}
+                                <span class="badge bg-warning text-dark">Atenção</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No Prazo</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="badge bg-success">Retirada</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'encomenda_detail' encomenda.pk %}" class="btn btn-sm btn-primary">Detalhes</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center py-5 text-muted">
+                        <p class="fs-4 mb-1">🔍</p>
+                        <p>Nenhuma encomenda encontrada com esses filtros.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if is_paginated %}
+    <div class="card-footer">
+        <nav>
+            <ul class="pagination justify-content-center mb-0">
+                {% if page_obj.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ filtro_q }}&status={{ filtro_status }}&bloco={{ filtro_bloco }}&torre={{ filtro_torre }}">Anterior</a></li>
+                {% endif %}
+                <li class="page-item disabled"><span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
+                {% if page_obj.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ filtro_q }}&status={{ filtro_status }}&bloco={{ filtro_bloco }}&torre={{ filtro_torre }}">Próxima</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const selectBloco = document.getElementById("filtro-bloco");
+        const selectTorre = document.getElementById("filtro-torre");
+        const urlAjax = "{% url 'ajax_carregar_dados' %}";
+
+        selectBloco.addEventListener("change", function() {
+            const blocoId = this.value;
+            selectTorre.innerHTML = '<option value="">Todas</option>';
+            
+            if (blocoId) {
+                selectTorre.disabled = true;
+                fetch(`${urlAjax}?tipo=torres&id=${blocoId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        data.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item.id;
+                            option.textContent = item.nome;
+                            selectTorre.appendChild(option);
+                        });
+                        selectTorre.disabled = false;
+                    });
+            } else {
+                selectTorre.disabled = true;
+            }
+        });
+    });
+</script>
+{% endblock %}

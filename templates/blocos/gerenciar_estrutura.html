@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4">
+    <h3>Gestão de Estrutura do Condomínio</h3>
+    <p class="text-muted">Cadastre a hierarquia de forma rápida: Crie o Bloco, depois a Torre e então os Apartamentos.</p>
+</div>
+
+<div class="row">
+    
+    <!-- COLUNA 1: BLOCOS -->
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100 border-primary">
+            <div class="card-header bg-primary text-white text-center">
+                <h5 class="mb-0">1. Blocos</h5>
+            </div>
+            <div class="card-body bg-light">
+                <!-- Formulário Rápido -->
+                <form method="post" class="mb-4 border-bottom pb-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="criar_bloco">
+                    
+                    <div class="mb-2">
+                        {{ form_bloco.nome }}
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-sm">Adicionar Bloco</button>
+                    </div>
+                </form>
+
+                <!-- Lista -->
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <ul class="list-group list-group-flush">
+                        {% for bloco in blocos %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <strong>{{ bloco.nome }}</strong>
+                            <div>
+                                <a href="{% url 'bloco_update' bloco.pk %}" class="text-decoration-none small me-2">Editar</a>
+                                <a href="{% url 'bloco_delete' bloco.pk %}" class="text-danger text-decoration-none small">X</a>
+                            </div>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted text-center small">Nenhum bloco</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- COLUNA 2: TORRES -->
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100 border-success">
+            <div class="card-header bg-success text-white text-center">
+                <h5 class="mb-0">2. Torres</h5>
+            </div>
+            <div class="card-body bg-light">
+                <!-- Formulário Rápido -->
+                <form method="post" class="mb-4 border-bottom pb-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="criar_torre">
+                    
+                    <div class="mb-2">
+                        <label class="small text-muted">Vincular ao Bloco:</label>
+                        {{ form_torre.bloco }}
+                    </div>
+                    <div class="mb-2">
+                        {{ form_torre.nome }}
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success btn-sm">Adicionar Torre</button>
+                    </div>
+                </form>
+
+                <!-- Lista -->
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <ul class="list-group list-group-flush">
+                        {% for torre in torres %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ torre.nome }}</strong><br>
+                                <small class="text-muted">{{ torre.bloco.nome }}</small>
+                            </div>
+                            <div>
+                                <a href="{% url 'torre_update' torre.pk %}" class="text-decoration-none small me-2">Editar</a>
+                                <a href="{% url 'torre_delete' torre.pk %}" class="text-danger text-decoration-none small">X</a>
+                            </div>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted text-center small">Nenhuma torre</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- COLUNA 3: APARTAMENTOS -->
+    <div class="col-md-4">
+        <div class="card shadow-sm h-100 border-info">
+            <div class="card-header bg-info text-white text-center">
+                <h5 class="mb-0">3. Apartamentos</h5>
+            </div>
+            <div class="card-body bg-light">
+                <!-- Formulário Rápido -->
+                <form method="post" class="mb-4 border-bottom pb-3">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="criar_apto">
+                    
+                    <div class="mb-2">
+                        <label class="small text-muted">Vincular à Torre:</label>
+                        {{ form_apto.torre }}
+                    </div>
+                    <div class="mb-2">
+                        {{ form_apto.numero }}
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-info text-white btn-sm">Adicionar Apto</button>
+                    </div>
+                </form>
+
+                <!-- Lista -->
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <ul class="list-group list-group-flush">
+                        {% for apt in apartamentos %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>Apto {{ apt.numero }}</strong><br>
+                                <small class="text-muted">{{ apt.torre.nome }}</small>
+                            </div>
+                            <div>
+                                <a href="{% url 'apartamento_update' apt.pk %}" class="text-decoration-none small me-2">Editar</a>
+                                <a href="{% url 'apartamento_delete' apt.pk %}" class="text-danger text-decoration-none small">X</a>
+                            </div>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted text-center small">Nenhum apartamento</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

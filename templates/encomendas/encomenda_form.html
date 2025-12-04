@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Registrar Nova Encomenda</h5>
+                {% if modo_repeticao %}
+                <span class="badge bg-white text-primary">Modo Rápido: {{ morador_nome }}</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                
+                {% if modo_repeticao %}
+                <div class="alert alert-info py-2 small">
+                    <i class="bi bi-info-circle"></i> 
+                    Você está adicionando múltiplas encomendas para <strong>{{ morador_nome }}</strong>. 
+                    <a href="{% url 'encomenda_create' %}" class="alert-link">Clique aqui para limpar</a>.
+                </div>
+                {% endif %}
+
+                <form method="post" enctype="multipart/form-data" id="encomendaForm">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <!-- Coluna da Esquerda: Filtros de Localização -->
+                        <div class="col-md-6 border-end">
+                            <h6 class="text-muted mb-3">1. Localizar Morador</h6>
+                            
+                            <!-- Bloco -->
+                            <div class="mb-3">
+                                <label class="form-label">Bloco</label>
+                                <select id="select-bloco" class="form-select">
+                                    <option value="">Selecione um Bloco</option>
+                                    {% for bloco in blocos %}
+                                        <option value="{{ bloco.id }}" {% if bloco_atual_id == bloco.id %}selected{% endif %}>
+                                            {{ bloco.nome }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Torre -->
+                            <div class="mb-3">
+                                <label class="form-label">Torre</label>
+                                <select id="select-torre" class="form-select" {% if not torres_atuais %}disabled{% endif %}>
+                                    <option value="">Selecione primeiro o Bloco</option>
+                                    {% for torre in torres_atuais %}
+                                        <option value="{{ torre.id }}" {% if torre_atual_id == torre.id %}selected{% endif %}>
+                                            {{ torre.nome }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Apartamento -->
+                            <div class="mb-3">
+                                <label class="form-label">Apartamento</label>
+                                <select id="select-apto" class="form-select" {% if not aptos_atuais %}disabled{% endif %}>
+                                    <option value="">Selecione primeiro a Torre</option>
+                                    {% for apt in aptos_atuais %}
+                                        <option value="{{ apt.id }}" {% if apto_atual_id == apt.id %}selected{% endif %}>
+                                            {{ apt.numero }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Campo Real do Morador -->
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-primary">Morador (Destinatário)</label>
+                                {{ form.morador }} 
+                                <div class="form-text">Selecione o apartamento para filtrar a lista.</div>
+                                {% if form.morador.errors %}
+                                    <div class="text-danger small">{{ form.morador.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Coluna da Direita: Dados do Pacote -->
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">2. Dados do Pacote</h6>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Transportadora</label>
+                                {{ form.transportadora }}
+                                {% for error in form.transportadora.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Código de Rastreio</label>
+                                {{ form.codigo_encomenda }}
+                                {% for error in form.codigo_encomenda.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Descrição</label>
+                                {{ form.descricao }}
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Foto / Comprovante</label>
+                                {{ form.foto }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- BOTÕES DE AÇÃO -->
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancelar</a>
+                        
+                        <!-- Botão de Loop -->
+                        <button type="submit" name="save_add_another" value="1" class="btn btn-outline-success">
+                            <span class="fw-bold">+</span> Salvar e Adicionar Outra
+                        </button>
+                        
+                        <!-- Botão Padrão -->
+                        <button type="submit" class="btn btn-success px-4">
+                            Salvar e Finalizar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const selectBloco = document.getElementById("select-bloco");
+        const selectTorre = document.getElementById("select-torre");
+        const selectApto = document.getElementById("select-apto");
+        const selectMorador = document.getElementById("id_morador"); 
+
+        const urlAjax = "{% url 'ajax_carregar_dados' %}";
+
+        function carregarOpcoes(tipo, paiId, selectAlvo, placeholder) {
+            selectAlvo.innerHTML = '<option value="">Carregando...</option>';
+            selectAlvo.disabled = true;
+
+            fetch(`${urlAjax}?tipo=${tipo}&id=${paiId}`)
+                .then(response => response.json())
+                .then(data => {
+                    selectAlvo.innerHTML = `<option value="">${placeholder}</option>`;
+                    data.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.id;
+                        option.textContent = item.nome;
+                        selectAlvo.appendChild(option);
+                    });
+                    selectAlvo.disabled = false;
+                });
+        }
+
+        selectBloco.addEventListener("change", function() {
+            const blocoId = this.value;
+            selectTorre.innerHTML = '<option value="">Selecione primeiro o Bloco</option>';
+            selectApto.innerHTML = '<option value="">Selecione primeiro a Torre</option>';
+            selectTorre.disabled = true;
+            selectApto.disabled = true;
+
+            if (blocoId) {
+                carregarOpcoes('torres', blocoId, selectTorre, 'Selecione a Torre');
+            }
+        });
+
+        selectTorre.addEventListener("change", function() {
+            const torreId = this.value;
+            selectApto.innerHTML = '<option value="">Selecione primeiro a Torre</option>';
+            selectApto.disabled = true;
+
+            if (torreId) {
+                carregarOpcoes('apartamentos', torreId, selectApto, 'Selecione o Apartamento');
+            }
+        });
+
+        selectApto.addEventListener("change", function() {
+            const aptoId = this.value;
+            // Se mudou o apto, deve limpar o morador atual para forçar nova escolha
+            // a não ser que seja o carregamento inicial da página (podemos tratar isso se necessário, 
+            // mas o comportamento padrão do Django form já seleciona o initial value)
+            //a
+            if (aptoId) {
+                carregarOpcoes('moradores', aptoId, selectMorador, 'Selecione o Morador');
+            }
+        });
+    });
+</script>
+{% endblock %}

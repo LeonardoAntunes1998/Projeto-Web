@@ -1,0 +1,131 @@
+{% load bootstrap5 %}
+{% bootstrap_css %}
+{% bootstrap_javascript %}
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoBox! Condomínio</title>
+    <style>
+        body { background-color: #f8f9fa; }
+        .sidebar { min-height: 100vh; background-color: #343a40; color: white; }
+        
+        /* Links Padrão do Menu */
+        .sidebar a.nav-link-custom { 
+            color: #adb5bd; 
+            text-decoration: none; 
+            padding: 10px; 
+            display: block; 
+        }
+        .sidebar a.nav-link-custom:hover { 
+            background-color: #495057; 
+            color: white; 
+        }
+        
+        /* Link Ativo */
+        .active-link { 
+            background-color: #0d6efd; 
+            color: white !important; 
+        }
+        
+        .brand-title { font-weight: bold; letter-spacing: 1px; }
+
+        /* Ajustes do Dropdown no Menu Escuro */
+        .sidebar .dropdown-toggle { color: #adb5bd; }
+        .sidebar .dropdown-toggle:hover { color: white; background-color: #495057; }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Menu Lateral -->
+        {% if user.is_authenticated %}
+        <div class="col-md-2 sidebar p-0">
+            <h3 class="text-center py-3 border-bottom brand-title">GoBox!</h3>
+            
+            <!-- ÁREA OPERACIONAL (Todos acessam) -->
+            <a href="{% url 'dashboard' %}" class="nav-link-custom {% if request.resolver_match.url_name == 'dashboard' %}active-link{% endif %}">
+                Dashboard
+            </a>
+            
+            <a href="{% url 'encomenda_create' %}" class="nav-link-custom {% if request.resolver_match.url_name == 'encomenda_create' %}active-link{% endif %}">
+                Nova Encomenda
+            </a>
+
+            <a href="{% url 'morador_list' %}" class="nav-link-custom {% if 'moradores' in request.path %}active-link{% endif %}">
+                Moradores
+            </a>
+            
+            <a href="{% url 'transportadora_list' %}" class="nav-link-custom {% if 'transportadoras' in request.path %}active-link{% endif %}">
+                Transportadoras
+            </a>
+
+            <!-- ÁREA ADMINISTRATIVA (Apenas Admin) -->
+            {% if user.eh_admin %}
+            <div class="text-uppercase small text-muted mt-4 px-3 mb-1">Administração</div>
+            
+            <a href="{% url 'funcionario_list' %}" class="nav-link-custom {% if 'equipe' in request.path %}active-link{% endif %}">
+                Gerenciar Equipe
+            </a>
+
+            <!-- Link direto para a Central de Estrutura -->
+            <a href="{% url 'gerenciar_estrutura' %}" class="nav-link-custom {% if 'unidades' in request.path %}active-link{% endif %}">
+                Estrutura do Condomínio
+            </a>
+            
+            <!-- Dropdown de Relatórios (NOVO) -->
+            <div class="dropdown">
+                <a href="#" class="nav-link-custom dropdown-toggle" id="relatoriosDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    Relatórios & Controle
+                </a>
+                <ul class="dropdown-menu dropdown-menu-dark shadow" aria-labelledby="relatoriosDropdown">
+                    <li><a class="dropdown-item" href="{% url 'relatorio_estatisticas' %}">Estatísticas</a></li>
+                    <li><a class="dropdown-item" href="{% url 'relatorio_auditoria' %}">Auditoria (Logs)</a></li>
+                </ul>
+            </div>
+
+            <a href="/admin/" target="_blank" class="nav-link-custom">
+                Django Admin
+            </a>
+            {% endif %}
+
+            <!-- Botão de Sair -->
+            <div class="mt-5 border-top p-3">
+                <form action="{% url 'logout' %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger w-100 btn-sm">Sair</button>
+                </form>
+                
+                <div class="small text-center mt-2 text-muted">
+                    <small>Logado como:</small><br>
+                    <strong>{{ user.username }}</strong><br>
+                    <span class="badge bg-secondary">{{ user.get_cargo_display }}</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Conteúdo Principal -->
+        <div class="col-md-{% if user.is_authenticated %}10{% else %}12{% endif %} p-4">
+            <!-- Área de Mensagens (Toasts/Alerts) -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- Bloco onde as páginas filhas são renderizadas -->
+            {% block content %}
+            {% endblock %}
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

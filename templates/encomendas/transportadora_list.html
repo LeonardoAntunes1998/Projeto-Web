@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Gerenciar Transportadoras</h3>
+    <a href="{% url 'transportadora_create' %}" class="btn btn-success">Nova Transportadora</a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nome</th>
+                        <th>Código / Slug</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for t in transportadoras %}
+                    <tr>
+                        <td><strong>{{ t.nome }}</strong></td>
+                        <td><span class="badge bg-secondary">{{ t.codigo|default:"-" }}</span></td>
+                        <td class="text-end">
+                            <a href="{% url 'transportadora_update' t.pk %}" class="btn btn-sm btn-outline-primary">Editar</a>
+                            <a href="{% url 'transportadora_delete' t.pk %}" class="btn btn-sm btn-outline-danger">Remover</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center text-muted py-4">Nenhuma transportadora cadastrada.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

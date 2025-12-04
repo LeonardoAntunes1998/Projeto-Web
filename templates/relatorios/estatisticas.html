@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="fw-bold text-dark">Painel de Métricas</h3>
+        <p class="text-muted small mb-0">Análise de fluxo e desempenho operacional.</p>
+    </div>
+    
+    <!-- Filtro de Dias -->
+    <div class="btn-group" role="group">
+        <a href="?dias=7&agrupamento={{ agrupamento_atual }}&status_local={{ status_local_atual }}" class="btn btn-outline-primary btn-sm {% if dias_filtro == 7 %}active{% endif %}">7 Dias</a>
+        <a href="?dias=30&agrupamento={{ agrupamento_atual }}&status_local={{ status_local_atual }}" class="btn btn-outline-primary btn-sm {% if dias_filtro == 30 %}active{% endif %}">30 Dias</a>
+    </div>
+    
+    <div class="ms-3">
+        <a href="{% url 'relatorio_exportar_csv' %}" class="btn btn-success btn-sm me-1">CSV</a>
+        <!-- Passa o filtro de dias para o PDF também -->
+        <a href="{% url 'relatorio_exportar_pdf' %}?dias={{ dias_filtro }}" class="btn btn-danger btn-sm">PDF</a>
+    </div>
+</div>
+
+<!-- KPIs -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100 border-start border-4 border-primary">
+            <div class="card-body">
+                <h6 class="text-uppercase text-muted small fw-bold mb-1">Recebidas</h6>
+                <h2 class="display-6 fw-bold text-dark mb-0">{{ total_entradas }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100 border-start border-4 border-success">
+            <div class="card-body">
+                <h6 class="text-uppercase text-muted small fw-bold mb-1">Entregues</h6>
+                <h2 class="display-6 fw-bold text-dark mb-0">{{ total_saidas }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100 border-start border-4 border-warning">
+            <div class="card-body">
+                <h6 class="text-uppercase text-muted small fw-bold mb-1">Em Estoque</h6>
+                <h2 class="display-6 fw-bold text-dark mb-0">{{ estoque_atual }}</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gráfico de Fluxo -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Fluxo Diário</h6>
+            </div>
+            <div class="card-body">
+                <div style="height: 300px;">
+                    <canvas id="chartFluxo"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Gráfico de Estrutura -->
+    <div class="col-md-8 mb-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white py-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="m-0 font-weight-bold text-dark">Volume por Local</h6>
+                    
+                    <!-- Filtro de Estrutura (Bloco/Torre/Apto) -->
+                    <div class="btn-group btn-group-sm">
+                        <a href="?dias={{ dias_filtro }}&status_local={{ status_local_atual }}&agrupamento=bloco" class="btn btn-outline-secondary {% if agrupamento_atual == 'bloco' %}active{% endif %}">Blocos</a>
+                        <a href="?dias={{ dias_filtro }}&status_local={{ status_local_atual }}&agrupamento=torre" class="btn btn-outline-secondary {% if agrupamento_atual == 'torre' %}active{% endif %}">Torres</a>
+                        <a href="?dias={{ dias_filtro }}&status_local={{ status_local_atual }}&agrupamento=apto" class="btn btn-outline-secondary {% if agrupamento_atual == 'apto' %}active{% endif %}">Aptos</a>
+                    </div>
+                </div>
+                
+                <!-- Filtro de Status (Total/Pendente/Entregue) -->
+                <div>
+                    <span class="small text-muted me-2">Filtrar Status:</span>
+                    <a href="?dias={{ dias_filtro }}&agrupamento={{ agrupamento_atual }}&status_local=todos" class="badge text-decoration-none {% if status_local_atual == 'todos' %}bg-secondary{% else %}bg-light text-dark border{% endif %}">Todos</a>
+                    <a href="?dias={{ dias_filtro }}&agrupamento={{ agrupamento_atual }}&status_local=PENDENTE" class="badge text-decoration-none {% if status_local_atual == 'PENDENTE' %}bg-warning text-dark{% else %}bg-light text-dark border{% endif %}">Pendentes</a>
+                    <a href="?dias={{ dias_filtro }}&agrupamento={{ agrupamento_atual }}&status_local=RETIRADA" class="badge text-decoration-none {% if status_local_atual == 'RETIRADA' %}bg-success{% else %}bg-light text-dark border{% endif %}">Entregues</a>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <canvas id="chartEstrutura"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráfico de Transportadoras -->
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white py-3">
+                <h6 class="m-0 font-weight-bold text-dark">Top Transportadoras</h6>
+            </div>
+            <div class="card-body">
+                <div style="height: 250px;">
+                    <canvas id="chartTransportadoras"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    Chart.defaults.font.family = "'Segoe UI', sans-serif";
+
+    // 1. Fluxo
+    new Chart(document.getElementById('chartFluxo'), {
+        type: 'line',
+        data: {
+            labels: {{ chart_datas|safe }},
+            datasets: [
+                { label: 'Entradas', data: {{ chart_entrada|safe }}, borderColor: '#0d6efd', backgroundColor: 'rgba(13, 110, 253, 0.1)', fill: true, tension: 0.3 },
+                { label: 'Saídas', data: {{ chart_saida|safe }}, borderColor: '#198754', backgroundColor: 'rgba(25, 135, 84, 0.05)', fill: true, tension: 0.3 }
+            ]
+        },
+        options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+    });
+
+    // 2. Estrutura
+    new Chart(document.getElementById('chartEstrutura'), {
+        type: 'bar',
+        data: {
+            labels: {{ est_labels|safe }},
+            datasets: [{ label: 'Volume', data: {{ est_data|safe }}, backgroundColor: '#6f42c1', borderRadius: 4 }]
+        },
+        options: { scales: { y: { beginAtZero: true } } }
+    });
+
+    // 3. Transportadoras
+    new Chart(document.getElementById('chartTransportadoras'), {
+        type: 'doughnut',
+        data: {
+            labels: {{ transp_labels|safe }},
+            datasets: [{ 
+                data: {{ transp_data|safe }}, 
+                backgroundColor: ['#0d6efd', '#6610f2', '#fd7e14', '#20c997', '#adb5bd'],
+                borderWidth: 0
+            }]
+        },
+        options: { maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+    });
+</script>
+{% endblock %}

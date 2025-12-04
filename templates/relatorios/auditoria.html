@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4">
+    <h3> Log de Auditoria</h3>
+    <p class="text-muted">Rastreabilidade completa de todas as ações no sistema.</p>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <!-- Filtros Avançados -->
+        <form method="get" class="row g-3 mb-4 border-bottom pb-4">
+            <div class="col-md-4">
+                <label class="form-label small fw-bold">Busca Geral</label>
+                <input type="text" name="q" class="form-control" placeholder="Rastreio, Morador, Detalhes..." value="{{ request.GET.q }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small fw-bold">Funcionário</label>
+                <input type="text" name="funcionario" class="form-control" placeholder="Login..." value="{{ request.GET.funcionario }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-bold">De</label>
+                <input type="date" name="data_inicio" class="form-control" value="{{ request.GET.data_inicio }}">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-bold">Até</label>
+                <input type="date" name="data_fim" class="form-control" value="{{ request.GET.data_fim }}">
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">Filtrar</button>
+            </div>
+        </form>
+
+        <!-- Tabela de Logs -->
+        <div class="table-responsive">
+            <table class="table table-sm table-striped table-hover small">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Data/Hora</th>
+                        <th>Ação</th>
+                        <th>Responsável</th>
+                        <th>Encomenda</th>
+                        <th>Detalhes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td class="font-monospace">{{ log.timestamp|date:"d/m/Y H:i:s" }}</td>
+                        <td>
+                            {% if log.acao == 'REGISTRO' %}
+                                <span class="badge bg-primary">Entrada</span>
+                            {% elif log.acao == 'RETIRADA' %}
+                                <span class="badge bg-success">Saída</span>
+                            {% elif log.acao == 'DELECAO_ADM' %}
+                                <span class="badge bg-danger">Deleção</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ log.get_acao_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ log.funcionario.username }}</td>
+                        <td>
+                            {% if log.encomenda %}
+                                <a href="{% url 'encomenda_detail' log.encomenda.pk %}" class="text-decoration-none">
+                                    #{{ log.encomenda.codigo_encomenda }}
+                                </a>
+                            {% else %}
+                                <span class="text-muted text-decoration-line-through">Deletada</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ log.detalhes|default:"-" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-4 text-muted">Nenhum registro encontrado.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Paginação -->
+        {% if is_paginated %}
+        <nav class="mt-3">
+            <ul class="pagination justify-content-center pagination-sm">
+                {% if page_obj.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q }}">Anterior</a></li>
+                {% endif %}
+                <li class="page-item disabled"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+                {% if page_obj.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q }}">Próxima</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

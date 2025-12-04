@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Moradores</h3>
+    <a href="{% url 'morador_create' %}" class="btn btn-success">Novo Morador</a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        
+        <!-- Formulário de Filtros em Cascata -->
+        <form method="get" class="row g-2 mb-4 align-items-end">
+            
+            <!-- 1. Bloco -->
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-muted">1. Bloco</label>
+                <select name="bloco" id="filtro-bloco" class="form-select">
+                    <option value="">Todos</option>
+                    {% for b in blocos %}
+                        <option value="{{ b.id }}" {% if filtro_bloco|add:"0" == b.id %}selected{% endif %}>
+                            {{ b.nome }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- 2. Torre -->
+            <div class="col-md-2">
+                <label class="form-label small fw-bold text-muted">2. Torre</label>
+                <select name="torre" id="filtro-torre" class="form-select" {% if not torres_filtradas %}disabled{% endif %}>
+                    <option value="">Todas</option>
+                    {% for t in torres_filtradas %}
+                        <option value="{{ t.id }}" {% if filtro_torre|add:"0" == t.id %}selected{% endif %}>
+                            {{ t.nome }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- 3. Apartamento -->
+            <div class="col-md-2">
+                <label class="form-label small fw-bold text-muted">3. Apartamento</label>
+                <select name="apto" id="filtro-apto" class="form-select" {% if not aptos_filtrados %}disabled{% endif %}>
+                    <option value="">Todos</option>
+                    {% for a in aptos_filtrados %}
+                        <option value="{{ a.id }}" {% if filtro_apto|add:"0" == a.id %}selected{% endif %}>
+                            {{ a.numero }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- 4. Busca por Nome -->
+            <div class="col-md-3">
+                <label class="form-label small fw-bold text-muted">Buscar Nome</label>
+                <input type="text" name="q" class="form-control" placeholder="Ex: João Silva" value="{{ filtro_q }}">
+            </div>
+
+            <!-- Botões -->
+            <div class="col-md-2">
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">Filtrar</button>
+                    <a href="{% url 'morador_list' %}" class="btn btn-outline-secondary btn-sm">Limpar</a>
+                </div>
+            </div>
+        </form>
+
+        <!-- Tabela de Resultados -->
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nome</th>
+                        <th>Localização</th>
+                        <th>Telefone</th>
+                        <th class="text-end">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for morador in moradores %}
+                    <tr>
+                        <td><strong>{{ morador.nome }}</strong></td>
+                        
+                        <!-- Localização formatada -->
+                        <td>
+                            Apto {{ morador.apto.numero }} <br>
+                            <small class="text-muted">
+                                {{ morador.apto.torre.nome }} - {{ morador.apto.torre.bloco.nome }}
+                            </small>
+                        </td>
+                        
+                        <td>{{ morador.telefone|default:"-" }}</td>
+                        
+                        <td class="text-end">
+                            <a href="{% url 'morador_update' morador.pk %}" class="btn btn-sm btn-outline-primary">Editar</a>
+                            <a href="{% url 'morador_delete' morador.pk %}" class="btn btn-sm btn-outline-danger">Remover</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-center text-muted py-4">Nenhum morador encontrado com esses filtros.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Paginação -->
+        {% if is_paginated %}
+        <nav class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ filtro_q }}&bloco={{ filtro_bloco }}&torre={{ filtro_torre }}&apto={{ filtro_apto }}">Anterior</a></li>
+                {% endif %}
+                <li class="page-item disabled"><span class="page-link">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span></li>
+                {% if page_obj.has_next %}
+                    <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ filtro_q }}&bloco={{ filtro_bloco }}&torre={{ filtro_torre }}&apto={{ filtro_apto }}">Próxima</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Script para Encadeamento (AJAX) -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const selectBloco = document.getElementById("filtro-bloco");
+        const selectTorre = document.getElementById("filtro-torre");
+        const selectApto = document.getElementById("filtro-apto");
+        
+      
+        const urlAjax = "{% url 'ajax_carregar_dados' %}";
+
+        // Função auxiliar de fetch
+        function carregarOpcoes(tipo, paiId, selectAlvo, placeholder) {
+            selectAlvo.disabled = true;
+            selectAlvo.innerHTML = '<option value="">Carregando...</option>';
+            
+            fetch(`${urlAjax}?tipo=${tipo}&id=${paiId}`)
+                .then(response => response.json())
+                .then(data => {
+                    selectAlvo.innerHTML = `<option value="">${placeholder}</option>`;
+                    data.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.id;
+                        option.textContent = item.nome;
+                        selectAlvo.appendChild(option);
+                    });
+                    selectAlvo.disabled = false;
+                });
+        }
+
+        // 1. Ao mudar Bloco -> Carrega Torres
+        selectBloco.addEventListener("change", function() {
+            const blocoId = this.value;
+            selectTorre.innerHTML = '<option value="">Todas</option>';
+            selectApto.innerHTML = '<option value="">Todos</option>';
+            selectApto.disabled = true;
+            
+            if (blocoId) {
+                carregarOpcoes('torres', blocoId, selectTorre, 'Todas');
+            } else {
+                selectTorre.disabled = true;
+            }
+        });
+
+        // 2. Ao mudar Torre -> Carrega Apartamentos
+        selectTorre.addEventListener("change", function() {
+            const torreId = this.value;
+            selectApto.innerHTML = '<option value="">Todos</option>';
+            
+            if (torreId) {
+                carregarOpcoes('apartamentos', torreId, selectApto, 'Todos');
+            } else {
+                selectApto.disabled = true;
+            }
+        });
+    });
+</script>
+{% endblock %}

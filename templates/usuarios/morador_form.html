@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    {% if form.instance.pk %}Editar{% else %}Cadastro de{% endif %} Morador
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <!-- Dados Pessoais -->
+                    <h6 class="text-muted mb-3 border-bottom pb-2">Dados Pessoais</h6>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nome Completo</label>
+                        {{ form.nome }}
+                        {% for error in form.nome.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Telefone / WhatsApp</label>
+                        {{ form.telefone }}
+                        {% for error in form.telefone.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Localização (Selects Encadeados) -->
+                    <h6 class="text-muted mt-4 mb-3 border-bottom pb-2">Localização</h6>
+
+                    <div class="row">
+                        <!-- 1. Bloco -->
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Bloco</label>
+                                <select id="select-bloco" class="form-select">
+                                    <option value="">Selecione...</option>
+                                    {% for bloco in blocos %}
+                                        <option value="{{ bloco.id }}" {% if bloco_atual_id == bloco.id %}selected{% endif %}>
+                                            {{ bloco.nome }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 2. Torre -->
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Torre</label>
+                                <select id="select-torre" class="form-select" {% if not torres_atuais %}disabled{% endif %}>
+                                    <option value="">Selecione...</option>
+                                    <!-- Popula se estiver editando -->
+                                    {% for torre in torres_atuais %}
+                                        <option value="{{ torre.id }}" {% if torre_atual_id == torre.id %}selected{% endif %}>
+                                            {{ torre.nome }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- 3. Apartamento (Campo Real que o Django salva) -->
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold text-success">Apartamento</label>
+                                <!-- O nome deve ser 'apto' para o Django reconhecer -->
+                                <select name="apto" id="id_apto" class="form-select" {% if not aptos_atuais %}disabled{% endif %} required>
+                                    <option value="">Selecione...</option>
+                                    <!-- Popula se estiver editando -->
+                                    {% for apt in aptos_atuais %}
+                                        <option value="{{ apt.id }}" {% if apto_atual_id == apt.id %}selected{% endif %}>
+                                            {{ apt.numero }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                {% if form.apto.errors %}
+                                    <div class="text-danger small">{{ form.apto.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <a href="{% url 'morador_list' %}" class="btn btn-secondary me-md-2">Cancelar</a>
+                        <button type="submit" class="btn btn-success px-4">Salvar Morador</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Script para Encadeamento (AJAX) -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const selectBloco = document.getElementById("select-bloco");
+        const selectTorre = document.getElementById("select-torre");
+        const selectApto = document.getElementById("id_apto"); // Campo final
+        
+        // Reutilizamos a API que criamos no app Encomendas
+        const urlAjax = "{% url 'ajax_carregar_dados' %}";
+
+        // Função genérica de busca
+        function carregarOpcoes(tipo, paiId, selectAlvo, placeholder) {
+            selectAlvo.disabled = true;
+            selectAlvo.innerHTML = '<option value="">Carregando...</option>';
+            
+            fetch(`${urlAjax}?tipo=${tipo}&id=${paiId}`)
+                .then(response => response.json())
+                .then(data => {
+                    selectAlvo.innerHTML = `<option value="">${placeholder}</option>`;
+                    data.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.id;
+                        option.textContent = item.nome; // Para apartamento, o backend envia 'numero' no campo 'nome'
+                        selectAlvo.appendChild(option);
+                    });
+                    selectAlvo.disabled = false;
+                })
+                .catch(err => {
+                    console.error("Erro no AJAX:", err);
+                    selectAlvo.innerHTML = '<option value="">Erro ao carregar</option>';
+                });
+        }
+
+        // 1. Ao mudar Bloco -> Carrega Torres
+        selectBloco.addEventListener("change", function() {
+            const blocoId = this.value;
+            selectTorre.innerHTML = '<option value="">Selecione...</option>';
+            selectApto.innerHTML = '<option value="">Selecione...</option>';
+            selectApto.disabled = true;
+            
+            if (blocoId) {
+                carregarOpcoes('torres', blocoId, selectTorre, 'Selecione...');
+            } else {
+                selectTorre.disabled = true;
+            }
+        });
+
+        // 2. Ao mudar Torre -> Carrega Apartamentos
+        selectTorre.addEventListener("change", function() {
+            const torreId = this.value;
+            selectApto.innerHTML = '<option value="">Selecione...</option>';
+            
+            if (torreId) {
+                carregarOpcoes('apartamentos', torreId, selectApto, 'Selecione...');
+            } else {
+                selectApto.disabled = true;
+            }
+        });
+    });
+</script>
+{% endblock %}

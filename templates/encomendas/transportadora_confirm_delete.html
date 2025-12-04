@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6">
+        <div class="card shadow border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">Remover Transportadora</h5>
+            </div>
+            <div class="card-body text-center">
+                <p class="fs-5">Tem certeza que deseja remover?</p>
+                <p class="fw-bold text-danger">{{ object.nome }}</p>
+                
+                <div class="alert alert-warning small">
+                    Atenção: Se existirem encomendas vinculadas a esta transportadora, 
+                    o campo "Transportadora" delas ficará vazio.
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <a href="{% url 'transportadora_list' %}" class="btn btn-secondary px-4">Cancelar</a>
+                    <button type="submit" class="btn btn-danger px-4">Confirmar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

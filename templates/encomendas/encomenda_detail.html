@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'dashboard' %}" class="text-decoration-none">&larr; Voltar para Dashboard</a>
+</div>
+
+<div class="row">
+    <!-- Coluna da Esquerda: Informações da Encomenda -->
+    <div class="col-md-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Encomenda #{{ encomenda.codigo_encomenda }}</h5>
+                {% if encomenda.status == 'PENDENTE' %}
+                    <span class="badge bg-warning text-dark">Pendente</span>
+                {% else %}
+                    <span class="badge bg-success">Retirada</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <!-- Linha 1: Morador e Local -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="text-muted small">Morador</label>
+                        <p class="fw-bold fs-5">{{ encomenda.morador.nome }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small">Localização</label>
+                        <p class="fw-bold">{{ encomenda.morador.apto }}</p>
+                    </div>
+                </div>
+
+                <!-- Linha 2: Transportadora e Descrição -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="text-muted small">Transportadora</label>
+                        <p>{{ encomenda.transportadora|default:"Não informada" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="text-muted small">Descrição</label>
+                        <p>{{ encomenda.descricao|default:"-" }}</p>
+                    </div>
+                </div>
+
+                <!-- Linha 3: Datas e Responsáveis -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="text-muted small">Data Chegada</label>
+                        <p class="mb-0">{{ encomenda.data_entrada|date:"d/m/Y H:i" }}</p>
+                        <small class="text-muted">Por: {{ encomenda.funcionario_registro.get_full_name|default:encomenda.funcionario_registro.username }}</small>
+                    </div>
+                    
+                    {% if encomenda.status == 'RETIRADA' %}
+                    <div class="col-md-6">
+                        <label class="text-muted small">Data Retirada</label>
+                        <p class="mb-0 fw-bold text-success">{{ encomenda.data_retirada|date:"d/m/Y H:i" }}</p>
+                        
+                        <!-- Lógica para buscar quem entregou nos Logs -->
+                        {% for log in encomenda.logs.all %}
+                            {% if log.acao == 'RETIRADA' %}
+                                <small class="text-muted">
+                                    Validado por: {{ log.funcionario.get_full_name|default:log.funcionario.username }}
+                                </small>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if encomenda.foto %}
+                <hr>
+                <label class="text-muted small mb-2">Comprovante / Foto</label>
+                <div>
+                    <img src="{{ encomenda.foto.url }}" class="img-fluid rounded border" style="max-height: 400px;">
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Coluna da Direita: Ações e Validação -->
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                <h6 class="mb-0 fw-bold">Validação de Retirada</h6>
+            </div>
+            <div class="card-body">
+                
+                {% if encomenda.status == 'PENDENTE' %}
+                
+                    <!-- ÁREA DE DESENVOLVIMENTO (Apagar este bloco em produção) -->
+                    <div class="alert alert-warning border-warning mb-4">
+                        <small class="fw-bold text-uppercase text-muted" style="font-size: 0.7rem;">[DEV MODE] Código do Morador:</small>
+                        <div class="font-monospace fs-4 text-center fw-bold text-dark user-select-all">
+                            {{ encomenda.codigo_retirada }}
+                        </div>
+                        <small class="text-muted" style="font-size: 0.7rem;">Copie este código para testar o campo abaixo.</small>
+                    </div>
+                    <!-- FIM DA ÁREA DEV -->
+
+                    <hr>
+
+                    <form action="{% url 'confirmar_retirada' encomenda.pk %}" method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label small text-muted">Solicite o código ao morador:</label>
+                            <input type="text" 
+                                   name="codigo_input" 
+                                   class="form-control form-control-lg text-center font-monospace text-uppercase" 
+                                   placeholder="AAAA00" 
+                                   maxlength="6" 
+                                   autocomplete="off"
+                                   required>
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                Validar e Entregar
+                            </button>
+                        </div>
+                    </form>
+                    
+                    {% if object.status == 'PENDENTE' %}
+                        <a href="{% url 'enviar_lembrete' object.pk %}" class="btn btn-warning">
+                            🔔 Enviar Lembrete
+                        </a>
+                        <a href="{% url 'reenviar_codigo' object.pk %}" class="btn btn-info text-white">
+                            🔑 Reenviar Código
+                        </a>
+                    {% endif %}
+
+
+                {% else %}
+                    <!-- Visualização Pós-Retirada -->
+                    <div class="alert alert-success text-center py-4">
+                        <h4 class="alert-heading">✅ Entregue</h4>
+                        <p class="mb-0">Retirada confirmada.</p>
+                        <hr>
+                        <small>Código utilizado: <strong class="font-monospace">{{ encomenda.codigo_retirada }}</strong></small>
+                    </div>
+                    <div class="d-grid">
+                        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Voltar ao Início</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        @page { size: A4; margin: 1cm; }
+        body { font-family: Helvetica, sans-serif; color: #333; font-size: 10px; }
+        h1 { color: #0d6efd; border-bottom: 2px solid #ddd; padding-bottom: 5px; font-size: 18px; }
+        h2 { color: #555; border-bottom: 1px solid #eee; padding-bottom: 3px; font-size: 14px; margin-top: 15px; }
+        .header { margin-bottom: 20px; color: #666; }
+        
+        table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        th { background-color: #f8f9fa; color: #333; padding: 6px; text-align: left; border-bottom: 1px solid #999; font-weight: bold; }
+        td { padding: 6px; border-bottom: 1px solid #eee; }
+        
+        .pendente { color: #fd7e14; font-weight: bold; }
+        .retirada { color: #198754; font-weight: bold; }
+        
+        .dashboard-table td { border: none; vertical-align: top; padding: 0 10px 0 0; }
+        .kpi-box { background-color: #f1f3f5; padding: 10px; border-radius: 5px; text-align: center; }
+        .kpi-num { font-size: 16px; font-weight: bold; color: #0d6efd; display: block; }
+    </style>
+</head>
+<body>
+    <h1>Relatório de Gestão - GoBox!</h1>
+    <div class="header">
+        Gerado em: {{ data_geracao|date:"d/m/Y H:i" }} | Período Analisado: Últimos {{ dias_filtro }} dias
+    </div>
+
+    <!-- SEÇÃO DASHBOARD (RESUMO) -->
+    <h2>📊 Resumo Executivo</h2>
+    
+    <table class="dashboard-table">
+        <tr>
+            <td width="33%">
+                <div class="kpi-box">
+                    Entradas no Período
+                    <span class="kpi-num">{{ kpis.entradas }}</span>
+                </div>
+            </td>
+            <td width="33%">
+                <div class="kpi-box">
+                    Saídas no Período
+                    <span class="kpi-num" style="color: #198754;">{{ kpis.saidas }}</span>
+                </div>
+            </td>
+            <td width="33%">
+                <div class="kpi-box">
+                    Estoque Atual (Pendente)
+                    <span class="kpi-num" style="color: #fd7e14;">{{ kpis.estoque }}</span>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <table class="dashboard-table" style="margin-top: 10px;">
+        <tr>
+            <td width="50%">
+                <strong>🏢 Top 5 Blocos (Volume)</strong>
+                <table style="margin-top: 5px; border: 1px solid #eee;">
+                    <tr><th>Bloco</th><th style="text-align: right;">Qtd</th></tr>
+                    {% for item in top_blocos %}
+                    <tr>
+                        <td>{{ item.morador__apto__torre__bloco__nome }}</td>
+                        <td style="text-align: right;">{{ item.total }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </td>
+            <td width="50%">
+                <strong>🚚 Top 5 Transportadoras</strong>
+                <table style="margin-top: 5px; border: 1px solid #eee;">
+                    <tr><th>Empresa</th><th style="text-align: right;">Qtd</th></tr>
+                    {% for item in top_transp %}
+                    <tr>
+                        <td>{{ item.transportadora__nome|default:"Não Informada" }}</td>
+                        <td style="text-align: right;">{{ item.total }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <!-- SEÇÃO LISTAGEM DETALHADA -->
+    <h2>📦 Listagem Detalhada de Encomendas</h2>
+    <table>
+        <thead>
+            <tr>
+                <th width="15%">Código</th>
+                <th width="20%">Morador</th>
+                <th width="15%">Unidade</th>
+                <th width="15%">Entrada</th>
+                <th width="15%">Saída</th>
+                <th width="10%">Status</th>
+                <th width="10%">Transp.</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in encomendas %}
+            <tr>
+                <td>{{ item.codigo_encomenda }}</td>
+                <td>{{ item.morador.nome|truncatechars:20 }}</td>
+                <td>{{ item.morador.apto }}</td>
+                <td>{{ item.data_entrada|date:"d/m H:i" }}</td>
+                <td>{{ item.data_retirada|date:"d/m H:i"|default:"-" }}</td>
+                <td class="{% if item.status == 'PENDENTE' %}pendente{% else %}retirada{% endif %}">
+                    {{ item.get_status_display }}
+                </td>
+                <td>{{ item.transportadora.nome|default:"-"|truncatechars:10 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
